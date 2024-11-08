@@ -22,7 +22,7 @@ from PyQt6.QtWidgets import (
 from cipher import __version__
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from cipher.cipher import Cipher
+from cipher.cipher import KDF, Cipher, KDFType
 
 
 class CipherApp(QMainWindow):
@@ -38,13 +38,20 @@ class CipherApp(QMainWindow):
         central_widget.setLayout(main_layout)
 
         # Encryption Method Selection
-        method_layout = QHBoxLayout()
-        self.method_label = QLabel("Method:")
-        self.method = QComboBox()
-        self.method.addItems(["AES-GCM", "Legacy"])
-        method_layout.addWidget(self.method_label)
-        method_layout.addWidget(self.method)
-        main_layout.addLayout(method_layout)
+        encryption_setting_layout = QHBoxLayout()
+        self.algorithm_label = QLabel("Algorithm:")
+        self.algorithm = QComboBox()
+        encryption_setting_layout.addWidget(self.algorithm_label)
+        encryption_setting_layout.addWidget(self.algorithm)
+        self.algorithm.addItems(["AES-GCM", "Legacy"])
+
+        self.kdf_label = QLabel("KDF:")
+        self.kdf = QComboBox()
+        self.kdf.addItems(["PBKDF2", "Scrypt", "Argon2"])
+        self.kdf.setCurrentIndex(2)
+        encryption_setting_layout.addWidget(self.kdf_label)
+        encryption_setting_layout.addWidget(self.kdf)
+        main_layout.addLayout(encryption_setting_layout)
 
         # Input Type Selection
         input_type_layout = QHBoxLayout()
@@ -162,8 +169,15 @@ class CipherApp(QMainWindow):
             QMessageBox.warning(self, "Error", "Please enter a password.")
             return
 
+        if self.kdf.currentText() == "Scrypt":
+            kdf_type = KDFType.SCRYPT
+        elif self.kdf.currentText() == "Argon2":
+            kdf_type = KDFType.ARGON2
+        elif self.kdf.currentText() == "PBKDF2":
+            kdf_type = KDFType.PBKDF2
+
         key = key_text.encode("utf-8")
-        cipher = Cipher(key)
+        cipher = Cipher(key, kdf=KDF(kdf_type, 32))
 
         # Get input data
         input_type = self.input_type.currentText()
@@ -186,7 +200,7 @@ class CipherApp(QMainWindow):
 
         # Encrypt data
         try:
-            if self.method.currentText() == "AES-GCM":
+            if self.algorithm.currentText() == "AES-GCM":
                 encrypted_data = cipher.encrypt_aesgcm(data)
             else:
                 encrypted_data = cipher.encrypt_legacy(data)
@@ -216,8 +230,15 @@ class CipherApp(QMainWindow):
             QMessageBox.warning(self, "Error", "Please enter a password.")
             return
 
+        if self.kdf.currentText() == "Scrypt":
+            kdf_type = KDFType.SCRYPT
+        elif self.kdf.currentText() == "Argon2":
+            kdf_type = KDFType.ARGON2
+        elif self.kdf.currentText() == "PBKDF2":
+            kdf_type = KDFType.PBKDF2
+
         key = key_text.encode("utf-8")
-        cipher = Cipher(key)
+        cipher = Cipher(key, kdf=KDF(kdf_type, 32))
 
         # Get input data
         input_type = self.input_type.currentText()
@@ -245,7 +266,7 @@ class CipherApp(QMainWindow):
 
         # Decrypt data
         try:
-            if self.method.currentText() == "AES-GCM":
+            if self.algorithm.currentText() == "AES-GCM":
                 decrypted_data = cipher.decrypt_aesgcm(data)
             else:
                 decrypted_data = cipher.decrypt_legacy(data)

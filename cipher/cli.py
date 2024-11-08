@@ -2,8 +2,8 @@ import argparse
 import base64
 from getpass import getpass
 
-from cipher.cipher import Cipher
 from cipher import __version__
+from cipher.cipher import KDF, Cipher, KDFType
 
 
 def get_parser():
@@ -22,6 +22,12 @@ def get_parser():
         choices=["file", "string"],
         default="string",
     )
+    encrypt_parser.add_argument(
+        "--kdf",
+        help="Key derivation function. pbkdf2 security lvl = 1, scrypt security lvl = 2, argon2 security lvl = 3",
+        choices=["pbkdf2", "scrypt", "argon2"],
+        default="pbkdf2",
+    )
     encrypt_parser.add_argument("-o", "--output", help="Output file path")
 
     # add decrypt command
@@ -34,6 +40,12 @@ def get_parser():
         choices=["file", "string"],
         default="string",
     )
+    decrypt_parser.add_argument(
+        "--kdf",
+        help="Key derivation function",
+        choices=["pbkdf2", "scrypt", "argon2"],
+        default="pbkdf2",
+    )
     decrypt_parser.add_argument("-o", "--output", help="Output file path")
     return parser
 
@@ -41,6 +53,13 @@ def get_parser():
 def main():
     parser = get_parser()
     args = parser.parse_args()
+
+    if args.kdf == "pbkdf2":
+        type = KDFType.PBKDF2
+    elif args.kdf == "scrypt":
+        type = KDFType.SCRYPT
+    elif args.kdf == "argon2":
+        type = KDFType.ARGON2
 
     if args.command == "encrypt":
         if args.input_type == "file":
@@ -52,7 +71,8 @@ def main():
             data = data_source.encode("utf-8")
 
         key = getpass("Enter your password: ")
-        cipher = Cipher(key.encode("utf-8"))
+
+        cipher = Cipher(key.encode("utf-8"), kdf=KDF(type, 32))
         encrypted_data = cipher.encrypt_aesgcm(data)
         if args.output:
             with open(args.output, "wb") as f:
@@ -68,7 +88,7 @@ def main():
             data = base64.b64decode(args.data.encode("utf-8"))
 
         key = getpass("Enter your password: ")
-        cipher = Cipher(key.encode("utf-8"))
+        cipher = Cipher(key.encode("utf-8"), kdf=KDF(type, 32))
         try:
             decrypted_data = cipher.decrypt_aesgcm(data)
         except ValueError:
