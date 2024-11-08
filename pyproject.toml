@@ -4,7 +4,8 @@ version = "0.0.1"
 description = "A simple encryption/decryption tool"
 authors = [{ name = "sean1832" }]
 license = { text = "MIT" }
-dependencies = ["cryptography"]
+dependencies = ["cryptography", "pyqt6"]
 
 [project.scripts]
 cipher = "cipher.cli:main"
+cipher-gui = "cipher.gui:main"

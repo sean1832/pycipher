@@ -7,4 +7,7 @@
 dist/
 build/
 venv/
-
+.vscode/
+*.build/
+*.dist/
+*.xml
