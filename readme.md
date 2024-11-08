@@ -26,6 +26,7 @@ cipher [OPTIONS] COMMAND [ARGS]...
 - `OPTIONS`
   - `-h`, `--help`: Show this message and exit.
   - `-v`, `--version`: Show the version and exit.
+  
 
 ### Commands
 | Command | Description  |
@@ -39,6 +40,7 @@ cipher encrypt [OPTIONS] TEXT
 ```
 - `-t`, `--input-type`: Input type (file, text)
 - `-o`, `--output`: Output as file. If not specified, output will be printed to console as base64 encoded string.
+- `--kdf`: Key derivation function (pbkdf2, scrypt, argon2) [default: pbkdf2]
 
 > [!NOTE]
 > After entering arguments, you will be prompted to enter a password. This password will be used to encrypt the text.
@@ -50,6 +52,7 @@ cipher decrypt [OPTIONS] TEXT
 ```
 - `-t`, `--input-type`: Input type (file, text)
 - `-o`, `--output`: Output as file. If not specified, output will be printed to console as decrypted text.
+- `--kdf`: Key derivation function (pbkdf2, scrypt, argon2) [default: pbkdf2]
 
 > [!NOTE]
 > After entering arguments, you will be prompted to enter a password. This password will be used to decrypt the text.
