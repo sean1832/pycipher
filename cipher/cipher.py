@@ -4,6 +4,7 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, padding
 from cryptography.hazmat.primitives.ciphers import Cipher as CryptoCipher
 from cryptography.hazmat.primitives.ciphers import algorithms, modes
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
 
@@ -11,7 +12,7 @@ class Cipher:
     def __init__(self, password: bytes):
         self.password = password
 
-    def encrypt(self, data: bytes) -> bytes:
+    def encrypt_legacy(self, data: bytes) -> bytes:
         salt = os.urandom(16)
         key = self._generate_key(self.password, salt)
         iv = os.urandom(16)  # AES block size is 16
@@ -27,7 +28,7 @@ class Cipher:
         # Return salt + iv + encrypted_data
         return salt + iv + encrypted_data
 
-    def decrypt(self, data: bytes) -> bytes:
+    def decrypt_legacy(self, data: bytes) -> bytes:
         # Extract the salt, IV, and encrypted data
         salt = data[:16]
         iv = data[16:32]
@@ -45,10 +46,29 @@ class Cipher:
 
         return original_data
 
+    def encrypt_aesgcm(self, data: bytes) -> bytes:
+        salt = os.urandom(16)
+        key = self._generate_key(self.password, salt)
+        aesgcm = AESGCM(key)
+        nonce = os.urandom(12)  # GCM standard nonce size
+        encrypted_data = aesgcm.encrypt(nonce, data, None)
+        return salt + nonce + encrypted_data
+
+    def decrypt_aesgcm(self, data: bytes) -> bytes:
+        try:
+            salt = data[:16]
+            nonce = data[16:28]
+            encrypted_data = data[28:]
+            key = self._generate_key(self.password, salt)
+            aesgcm = AESGCM(key)
+            return aesgcm.decrypt(nonce, encrypted_data, None)
+        except Exception as e:
+            raise ValueError("Decryption failed.") from e
+
     def _generate_key(self, password: bytes, salt: bytes) -> bytes:
         kdf = PBKDF2HMAC(
             algorithm=hashes.SHA256(),
-            length=32,
+            length=32,  # 256 bits
             salt=salt,
             iterations=300_000,
             backend=default_backend(),

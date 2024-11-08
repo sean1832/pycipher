@@ -19,6 +19,8 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from cipher import __version__
+
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from cipher.cipher import Cipher
 
@@ -26,7 +28,7 @@ from cipher.cipher import Cipher
 class CipherApp(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Cipher")
+        self.setWindowTitle(f"Cipher {__version__}")
         text_font = QFont("Consolas", 10)  # better for monospace font
 
         # Central widget and main layout
@@ -34,6 +36,15 @@ class CipherApp(QMainWindow):
         self.setCentralWidget(central_widget)
         main_layout = QVBoxLayout()
         central_widget.setLayout(main_layout)
+
+        # Encryption Method Selection
+        method_layout = QHBoxLayout()
+        self.method_label = QLabel("Method:")
+        self.method = QComboBox()
+        self.method.addItems(["AES-GCM", "Legacy"])
+        method_layout.addWidget(self.method_label)
+        method_layout.addWidget(self.method)
+        main_layout.addLayout(method_layout)
 
         # Input Type Selection
         input_type_layout = QHBoxLayout()
@@ -175,7 +186,10 @@ class CipherApp(QMainWindow):
 
         # Encrypt data
         try:
-            encrypted_data = cipher.encrypt(data)
+            if self.method.currentText() == "AES-GCM":
+                encrypted_data = cipher.encrypt_aesgcm(data)
+            else:
+                encrypted_data = cipher.encrypt_legacy(data)
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Encryption failed: {e}")
             return
@@ -231,7 +245,10 @@ class CipherApp(QMainWindow):
 
         # Decrypt data
         try:
-            decrypted_data = cipher.decrypt(data)
+            if self.method.currentText() == "AES-GCM":
+                decrypted_data = cipher.decrypt_aesgcm(data)
+            else:
+                decrypted_data = cipher.decrypt_legacy(data)
         except ValueError:
             QMessageBox.warning(self, "Error", "Incorrect password.")
             return

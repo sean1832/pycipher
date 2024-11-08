@@ -3,10 +3,13 @@ import base64
 from getpass import getpass
 
 from cipher.cipher import Cipher
+from cipher import __version__
 
 
 def get_parser():
     parser = argparse.ArgumentParser(description="Cipher CLI")
+    parser.add_argument("-v", "--version", action="version", version="%(prog)s v" + __version__)
+
     # add commands
     subparsers = parser.add_subparsers(dest="command")
 
@@ -50,7 +53,7 @@ def main():
 
         key = getpass("Enter your password: ")
         cipher = Cipher(key.encode("utf-8"))
-        encrypted_data = cipher.encrypt(data)
+        encrypted_data = cipher.encrypt_aesgcm(data)
         if args.output:
             with open(args.output, "wb") as f:
                 f.write(encrypted_data)
@@ -67,7 +70,7 @@ def main():
         key = getpass("Enter your password: ")
         cipher = Cipher(key.encode("utf-8"))
         try:
-            decrypted_data = cipher.decrypt(data)
+            decrypted_data = cipher.decrypt_aesgcm(data)
         except ValueError:
             print("Incorrect password")
             return

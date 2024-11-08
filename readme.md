@@ -23,6 +23,9 @@ cipher-gui
 ```bash
 cipher [OPTIONS] COMMAND [ARGS]...
 ```
+- `OPTIONS`
+  - `-h`, `--help`: Show this message and exit.
+  - `-v`, `--version`: Show the version and exit.
 
 ### Commands
 | Command | Description  |
