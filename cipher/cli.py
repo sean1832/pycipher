@@ -5,7 +5,7 @@ from getpass import getpass
 from cipher.cipher import Cipher
 
 
-def parser():
+def get_parser():
     parser = argparse.ArgumentParser(description="Cipher CLI")
     # add commands
     subparsers = parser.add_subparsers(dest="command")
@@ -32,12 +32,13 @@ def parser():
         default="string",
     )
     decrypt_parser.add_argument("-o", "--output", help="Output file path")
-    return parser.parse_args()
+    return parser
 
 
 def main():
-    args = parser()
-    key = getpass("Enter your password: ")
+    parser = get_parser()
+    args = parser.parse_args()
+
     if args.command == "encrypt":
         if args.input_type == "file":
             data_source = getpass("Enter file to encrypt: ")
@@ -47,6 +48,7 @@ def main():
             data_source = getpass("Enter b64 string to encrypt: ")
             data = data_source.encode("utf-8")
 
+        key = getpass("Enter your password: ")
         cipher = Cipher(key.encode("utf-8"))
         encrypted_data = cipher.encrypt(data)
         if args.output:
@@ -62,6 +64,7 @@ def main():
         else:
             data = base64.b64decode(args.data.encode("utf-8"))
 
+        key = getpass("Enter your password: ")
         cipher = Cipher(key.encode("utf-8"))
         try:
             decrypted_data = cipher.decrypt(data)
@@ -75,6 +78,8 @@ def main():
             user_confirm = input("Do you want to print the decrypted data? (y/n): ")
             if user_confirm.lower() == "y":
                 print(decrypted_data.decode("utf-8"))
+    else:
+        parser.print_help()
 
 
 if __name__ == "__main__":
