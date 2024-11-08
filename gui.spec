@@ -1,5 +1,13 @@
 # -*- mode: python ; coding: utf-8 -*-
 
+import importlib.util
+import os
+
+# Load the __version__ attribute from __init__.py
+spec = importlib.util.spec_from_file_location("cipher", os.path.join("cipher", "__init__.py"))
+cipher = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(cipher)
+version = cipher.__version__
 
 a = Analysis(
     ['cipher\\gui.py'],
@@ -28,7 +36,7 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
-    name='cipher-gui',
+    name=f'cipher-gui-{version}',  # Append the version to the name
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
