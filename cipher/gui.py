@@ -285,7 +285,7 @@ class CipherApp(QMainWindow):
             params = ScryptParams(n, r, p)
         elif self.kdf.currentText() == "Argon2":
             time_cost = self.argon2_time_input.value()
-            memory_cost = self.argon2_memory_input.value() * 1024  # Convert to KB
+            memory_cost = self.argon2_memory_input.value() * 1024  # convert to KB
             parallelism = self.argon2_parallelism_input.value()
             params = Argon2Params(time_cost, memory_cost, parallelism)
         elif self.kdf.currentText() == "PBKDF2":
@@ -324,6 +324,9 @@ class CipherApp(QMainWindow):
             QMessageBox.critical(self, "Error", f"Encryption failed: {e}")
             return
 
+        # prepend params to encrypted data
+        encrypted_data = params.to_bytes() + encrypted_data
+
         # Handle output
         output_type = self.output_type.currentText()
         if output_type == "File":
@@ -346,24 +349,6 @@ class CipherApp(QMainWindow):
             QMessageBox.warning(self, "Error", "Please enter a password.")
             return
 
-        kdf_params = {}
-        if self.kdf.currentText() == "Scrypt":
-            n = self.scrypt_n_input.value()
-            r = self.scrypt_r_input.value()
-            p = self.scrypt_p_input.value()
-            params = ScryptParams(n, r, p)
-        elif self.kdf.currentText() == "Argon2":
-            time_cost = self.argon2_time_input.value()
-            memory_cost = self.argon2_memory_input.value() * 1024  # Convert MB to KB
-            parallelism = self.argon2_parallelism_input.value()
-            params = Argon2Params(time_cost, memory_cost, parallelism)
-        elif self.kdf.currentText() == "PBKDF2":
-            iterations = self.pbkdf2_iter_input.value()
-            params = Pbkdf2Params(iterations)
-
-        key = key_text.encode("utf-8")
-        cipher = Cipher(key, kdf=KDF(params, 32, **kdf_params))
-
         # Get input data
         input_type = self.input_type.currentText()
         if input_type == "File":
@@ -373,7 +358,7 @@ class CipherApp(QMainWindow):
                 return
             try:
                 with open(input_file, "rb") as f:
-                    data = f.read()
+                    data_raw = f.read()
             except Exception as e:
                 QMessageBox.critical(self, "Error", f"Failed to read input file: {e}")
                 return
@@ -383,10 +368,37 @@ class CipherApp(QMainWindow):
                 QMessageBox.warning(self, "Error", "Please enter text to decrypt.")
                 return
             try:
-                data = base64.b64decode(input_text.encode("utf-8"))
+                data_raw = base64.b64decode(input_text.encode("utf-8"))
             except Exception as e:
                 QMessageBox.critical(self, "Error", f"Invalid base64 input: {e}")
                 return
+
+        # extract params from encrypted data
+        try:
+            kdf = KDF.from_bytes(data_raw)
+            data = data_raw[kdf.params.BINARY_SIZE :]  # remove params from data
+        except ValueError:
+            if self.kdf.currentText() == "Scrypt":
+                n = self.scrypt_n_input.value()
+                r = self.scrypt_r_input.value()
+                p = self.scrypt_p_input.value()
+                params = ScryptParams(n, r, p)
+            elif self.kdf.currentText() == "Argon2":
+                time_cost = self.argon2_time_input.value()
+                memory_cost = self.argon2_memory_input.value() * 1024  # convert to KB
+                parallelism = self.argon2_parallelism_input.value()
+                params = Argon2Params(time_cost, memory_cost, parallelism)
+            elif self.kdf.currentText() == "PBKDF2":
+                iterations = self.pbkdf2_iter_input.value()
+                params = Pbkdf2Params(iterations)
+            kdf = KDF(params, 32)
+            data = data_raw
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to extract KDF params: {e}")
+            return
+
+        key = key_text.encode("utf-8")
+        cipher = Cipher(key, kdf=kdf)
 
         # Decrypt data
         try:
@@ -394,8 +406,8 @@ class CipherApp(QMainWindow):
                 decrypted_data = cipher.decrypt_aesgcm(data)
             else:
                 decrypted_data = cipher.decrypt_legacy(data)
-        except ValueError:
-            QMessageBox.warning(self, "Error", "Incorrect password.")
+        except ValueError as e:
+            QMessageBox.warning(self, "Error", f"{e}")
             return
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Decryption failed: {e}")

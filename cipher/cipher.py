@@ -1,4 +1,5 @@
 import os
+import struct
 from typing import Optional, Union
 
 from argon2.low_level import Type, hash_secret_raw
@@ -12,6 +13,9 @@ from cryptography.hazmat.primitives.kdf.scrypt import Scrypt
 
 
 class Pbkdf2Params:
+    FORMAT: str = ">cI"
+    BINARY_SIZE = struct.calcsize(FORMAT)
+
     def __init__(self, iterations: int) -> None:
         self.iterations = iterations
 
@@ -19,8 +23,38 @@ class Pbkdf2Params:
     def from_dict(params: dict) -> "Pbkdf2Params":
         return Pbkdf2Params(iterations=params["iterations"])
 
+    def to_dict(self) -> dict:
+        return {"kdf": "pbkdf2", "iter": self.iterations}
+
+    def to_bytes(self) -> bytes:
+        """Converts PBKDF2 parameters to bytes
+
+        Returns:
+            bytes: PBKDF2 parameters in bytes (13 bytes)
+        """
+        return struct.pack(self.FORMAT, b"p", self.iterations)  # 0,0 are dummy values for padding
+
+    @staticmethod
+    def from_bytes(data: bytes) -> "Pbkdf2Params":
+        """Converts bytes to PBKDF2 parameters
+
+        Args:
+            data (bytes): PBKDF2 parameters in bytes
+
+        Returns:
+            Pbkdf2Params: PBKDF2 parameters
+        """
+        try:
+            kdf, iterations = struct.unpack(Pbkdf2Params.FORMAT, data)
+            return Pbkdf2Params(iterations)
+        except struct.error:
+            raise ValueError("Invalid PBKDF2 parameters")
+
 
 class ScryptParams:
+    FORMAT: str = ">cIHH"
+    BINARY_SIZE = struct.calcsize(FORMAT)
+
     def __init__(self, n: int, r: int, p: int) -> None:
         self.n = n
         self.r = r
@@ -30,8 +64,38 @@ class ScryptParams:
     def from_dict(params: dict) -> "ScryptParams":
         return ScryptParams(n=params["n"], r=params["r"], p=params["p"])
 
+    def to_dict(self) -> dict:
+        return {"kdf": "scrypt", "n": self.n, "r": self.r, "p": self.p}
+
+    def to_bytes(self) -> bytes:
+        """Converts Scrypt parameters to bytes
+
+        Returns:
+            bytes: Scrypt parameters in bytes (13 bytes)
+        """
+        return struct.pack(self.FORMAT, b"s", self.n, self.r, self.p)
+
+    @staticmethod
+    def from_bytes(data: bytes) -> "ScryptParams":
+        """Converts bytes to Scrypt parameters
+
+        Args:
+            data (bytes): Scrypt parameters in bytes
+
+        Returns:
+            ScryptParams: Scrypt parameters
+        """
+        try:
+            kdf, n, r, p = struct.unpack(ScryptParams.FORMAT, data)
+            return ScryptParams(n, r, p)
+        except struct.error:
+            raise ValueError("Invalid Scrypt parameters")
+
 
 class Argon2Params:
+    FORMAT: str = ">cHIH"
+    BINARY_SIZE = struct.calcsize(FORMAT)
+
     def __init__(self, time_cost: int, memory_cost: int, parallelism: int) -> None:
         self.time_cost = time_cost
         self.memory_cost = memory_cost
@@ -45,6 +109,38 @@ class Argon2Params:
             parallelism=params["parallelism"],
         )
 
+    def to_dict(self) -> dict:
+        return {
+            "kdf": "argon2",
+            "time_cost": self.time_cost,
+            "memory_cost": self.memory_cost,
+            "parallelism": self.parallelism,
+        }
+
+    def to_bytes(self) -> bytes:
+        """Converts Argon2 parameters to bytes
+
+        Returns:
+            bytes: Argon2 parameters in bytes (13 bytes)
+        """
+        return struct.pack(self.FORMAT, b"a", self.time_cost, self.memory_cost, self.parallelism)
+
+    @staticmethod
+    def from_bytes(data: bytes) -> "Argon2Params":
+        """Converts bytes to Argon2 parameters
+
+        Args:
+            data (bytes): Argon2 parameters in bytes
+
+        Returns:
+            Argon2Params: Argon2 parameters
+        """
+        try:
+            kdf, time_cost, memory_cost, parallelism = struct.unpack(Argon2Params.FORMAT, data)
+            return Argon2Params(time_cost, memory_cost, parallelism)
+        except struct.error:
+            raise ValueError("Invalid Argon2 parameters")
+
 
 class KDF:
     def __init__(self, params: Union[Pbkdf2Params, ScryptParams, Argon2Params], length: int = 32):
@@ -54,6 +150,19 @@ class KDF:
                 "Invalid key length, must be 16 (128 bits) or 32 (256 bits) or 64 (512 bits)"
             )
         self.length = length
+
+    @staticmethod
+    def from_bytes(data: bytes) -> "KDF":
+        kdf = data[0:1]
+        if kdf == b"p":
+            params = Pbkdf2Params.from_bytes(data[: Pbkdf2Params.BINARY_SIZE])
+        elif kdf == b"s":
+            params = ScryptParams.from_bytes(data[: ScryptParams.BINARY_SIZE])
+        elif kdf == b"a":
+            params = Argon2Params.from_bytes(data[: Argon2Params.BINARY_SIZE])
+        else:
+            raise ValueError("Invalid KDF type")
+        return KDF(params, 32)
 
     def derive(self, password: bytes, salt: bytes) -> bytes:
         if isinstance(self.params, Pbkdf2Params):
