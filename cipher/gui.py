@@ -14,6 +14,8 @@ from PyQt6.QtWidgets import (
     QMainWindow,
     QMessageBox,
     QPushButton,
+    QSizePolicy,
+    QSpinBox,
     QTextEdit,
     QVBoxLayout,
     QWidget,
@@ -22,7 +24,7 @@ from PyQt6.QtWidgets import (
 from cipher import __version__
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from cipher.cipher import KDF, Cipher, KDFType
+from cipher.cipher import KDF, Argon2Params, Cipher, Pbkdf2Params, ScryptParams
 
 
 class CipherApp(QMainWindow):
@@ -41,6 +43,8 @@ class CipherApp(QMainWindow):
         encryption_setting_layout = QHBoxLayout()
         self.algorithm_label = QLabel("Algorithm:")
         self.algorithm = QComboBox()
+        # Set the ComboBox to expand to full width
+        self.algorithm.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         encryption_setting_layout.addWidget(self.algorithm_label)
         encryption_setting_layout.addWidget(self.algorithm)
         self.algorithm.addItems(["AES-GCM", "Legacy"])
@@ -49,9 +53,69 @@ class CipherApp(QMainWindow):
         self.kdf = QComboBox()
         self.kdf.addItems(["PBKDF2", "Scrypt", "Argon2"])
         self.kdf.setCurrentIndex(2)
+        # Set the ComboBox to expand to full width
+        self.kdf.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         encryption_setting_layout.addWidget(self.kdf_label)
         encryption_setting_layout.addWidget(self.kdf)
         main_layout.addLayout(encryption_setting_layout)
+
+        # KDF Parameter Widgets (will be shown/hidden based on selected KDF)
+        self.kdf_param_layout = QHBoxLayout()
+
+        # PBKDF2 parameters
+        self.pbkdf2_iter_label = QLabel("Iterations:")
+        self.pbkdf2_iter_input = QSpinBox()
+        self.pbkdf2_iter_input.setRange(100_000, 1_000_000)
+        self.pbkdf2_iter_input.setValue(300_000)
+        self.pbkdf2_iter_input.setSingleStep(100_000)
+        self.pbkdf2_iter_input.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+
+        # Scrypt parameters
+        self.scrypt_n_label = QLabel("Cost (N):")
+        self.scrypt_n_input = QSpinBox()
+        self.scrypt_n_input.setRange(16384, 1048576)  # 16 MiB to 1 GiB
+        self.scrypt_n_input.setValue(65536)  # 64 MiB
+        self.scrypt_n_input.setSingleStep(16384)
+        self.scrypt_n_input.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self.scrypt_r_label = QLabel("Block Size (r):")
+        self.scrypt_r_input = QSpinBox()
+        self.scrypt_r_input.setRange(8, 32)
+        self.scrypt_r_input.setValue(8)
+        self.scrypt_r_input.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self.scrypt_p_label = QLabel("Parallelism (p):")
+        self.scrypt_p_input = QSpinBox()
+        self.scrypt_p_input.setRange(1, 16)
+        self.scrypt_p_input.setValue(1)
+        self.scrypt_p_input.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+
+        # Argon2 parameters
+        self.argon2_time_label = QLabel("Time Cost:")
+        self.argon2_time_input = QSpinBox()
+        self.argon2_time_input.setRange(1, 10)
+        self.argon2_time_input.setValue(2)
+        self.argon2_time_input.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self.argon2_memory_label = QLabel("Memory (MB):")
+        self.argon2_memory_input = QSpinBox()
+        self.argon2_memory_input.setRange(64, 4096)  # 64 MiB to 4 GiB
+        self.argon2_memory_input.setValue(1024)  # 1 GiB
+        self.argon2_memory_input.setSingleStep(64)
+        self.argon2_memory_input.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
+        )
+        self.argon2_parallelism_label = QLabel("Parallelism:")
+        self.argon2_parallelism_input = QSpinBox()
+        self.argon2_parallelism_input.setRange(1, 8)
+        self.argon2_parallelism_input.setValue(4)
+        self.argon2_parallelism_input.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
+        )
+
+        # Add KDF parameter layout to main layout
+        main_layout.addLayout(self.kdf_param_layout)
+
+        # Connect KDF selection change to update parameters
+        self.kdf.currentIndexChanged.connect(self.update_kdf_parameters)
+        self.update_kdf_parameters()  # Initialize parameter widgets
 
         # Input Type Selection
         input_type_layout = QHBoxLayout()
@@ -123,6 +187,50 @@ class CipherApp(QMainWindow):
         self.toggle_input_fields()
         self.toggle_output_fields()
 
+    def update_kdf_parameters(self):
+        # Clear current parameter widgets without deleting them
+        while self.kdf_param_layout.count():
+            item = self.kdf_param_layout.takeAt(0)
+            if item is None:
+                break
+            widget = item.widget()
+            if widget is not None:
+                widget.setParent(None)
+                widget.hide()
+
+        kdf = self.kdf.currentText()
+        if kdf == "PBKDF2":
+            self.kdf_param_layout.addWidget(self.pbkdf2_iter_label)
+            self.pbkdf2_iter_label.show()
+            self.kdf_param_layout.addWidget(self.pbkdf2_iter_input)
+            self.pbkdf2_iter_input.show()
+        elif kdf == "Scrypt":
+            self.kdf_param_layout.addWidget(self.scrypt_n_label)
+            self.scrypt_n_label.show()
+            self.kdf_param_layout.addWidget(self.scrypt_n_input)
+            self.scrypt_n_input.show()
+            self.kdf_param_layout.addWidget(self.scrypt_r_label)
+            self.scrypt_r_label.show()
+            self.kdf_param_layout.addWidget(self.scrypt_r_input)
+            self.scrypt_r_input.show()
+            self.kdf_param_layout.addWidget(self.scrypt_p_label)
+            self.scrypt_p_label.show()
+            self.kdf_param_layout.addWidget(self.scrypt_p_input)
+            self.scrypt_p_input.show()
+        elif kdf == "Argon2":
+            self.kdf_param_layout.addWidget(self.argon2_time_label)
+            self.argon2_time_label.show()
+            self.kdf_param_layout.addWidget(self.argon2_time_input)
+            self.argon2_time_input.show()
+            self.kdf_param_layout.addWidget(self.argon2_memory_label)
+            self.argon2_memory_label.show()
+            self.kdf_param_layout.addWidget(self.argon2_memory_input)
+            self.argon2_memory_input.show()
+            self.kdf_param_layout.addWidget(self.argon2_parallelism_label)
+            self.argon2_parallelism_label.show()
+            self.kdf_param_layout.addWidget(self.argon2_parallelism_input)
+            self.argon2_parallelism_input.show()
+
     def toggle_input_fields(self):
         input_type = self.input_type.currentText()
         if input_type == "File":
@@ -169,15 +277,23 @@ class CipherApp(QMainWindow):
             QMessageBox.warning(self, "Error", "Please enter a password.")
             return
 
+        kdf_params = {}
         if self.kdf.currentText() == "Scrypt":
-            kdf_type = KDFType.SCRYPT
+            n = self.scrypt_n_input.value()
+            r = self.scrypt_r_input.value()
+            p = self.scrypt_p_input.value()
+            params = ScryptParams(n, r, p)
         elif self.kdf.currentText() == "Argon2":
-            kdf_type = KDFType.ARGON2
+            time_cost = self.argon2_time_input.value()
+            memory_cost = self.argon2_memory_input.value() * 1024  # Convert to KB
+            parallelism = self.argon2_parallelism_input.value()
+            params = Argon2Params(time_cost, memory_cost, parallelism)
         elif self.kdf.currentText() == "PBKDF2":
-            kdf_type = KDFType.PBKDF2
+            iterations = self.pbkdf2_iter_input.value()
+            params = Pbkdf2Params(iterations)
 
         key = key_text.encode("utf-8")
-        cipher = Cipher(key, kdf=KDF(kdf_type, 32))
+        cipher = Cipher(key, kdf=KDF(params, 32, **kdf_params))
 
         # Get input data
         input_type = self.input_type.currentText()
@@ -230,15 +346,23 @@ class CipherApp(QMainWindow):
             QMessageBox.warning(self, "Error", "Please enter a password.")
             return
 
+        kdf_params = {}
         if self.kdf.currentText() == "Scrypt":
-            kdf_type = KDFType.SCRYPT
+            n = self.scrypt_n_input.value()
+            r = self.scrypt_r_input.value()
+            p = self.scrypt_p_input.value()
+            params = ScryptParams(n, r, p)
         elif self.kdf.currentText() == "Argon2":
-            kdf_type = KDFType.ARGON2
+            time_cost = self.argon2_time_input.value()
+            memory_cost = self.argon2_memory_input.value() * 1024  # Convert MB to KB
+            parallelism = self.argon2_parallelism_input.value()
+            params = Argon2Params(time_cost, memory_cost, parallelism)
         elif self.kdf.currentText() == "PBKDF2":
-            kdf_type = KDFType.PBKDF2
+            iterations = self.pbkdf2_iter_input.value()
+            params = Pbkdf2Params(iterations)
 
         key = key_text.encode("utf-8")
-        cipher = Cipher(key, kdf=KDF(kdf_type, 32))
+        cipher = Cipher(key, kdf=KDF(params, 32, **kdf_params))
 
         # Get input data
         input_type = self.input_type.currentText()

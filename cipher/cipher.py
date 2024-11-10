@@ -1,6 +1,5 @@
 import os
-from enum import Enum
-from typing import Optional
+from typing import Optional, Union
 
 from argon2.low_level import Type, hash_secret_raw
 from cryptography.hazmat.backends import default_backend
@@ -12,88 +11,101 @@ from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from cryptography.hazmat.primitives.kdf.scrypt import Scrypt
 
 
-class KDFType(Enum):
-    """
-    Enumeration for Key Derivation Function (KDF) types.
+class Pbkdf2Params:
+    def __init__(self, iterations: int) -> None:
+        self.iterations = iterations
 
-    Attributes:
-        PBKDF2 (int): Represents the PBKDF2 key derivation function,
-                      which uses HMAC with a configurable iteration count
-                      to produce a derived key. Suitable for general-purpose
-                      key derivation but not memory-hard.
+    @staticmethod
+    def from_dict(params: dict) -> "Pbkdf2Params":
+        return Pbkdf2Params(iterations=params["iterations"])
 
-        SCRYPT (int): Represents the scrypt key derivation function,
-                      designed to be memory-hard and resistant to brute-force
-                      attacks with specialized hardware like GPUs and ASICs.
-                      Useful when memory hardness is desired.
 
-        ARGON2 (int): Represents the Argon2 key derivation function,
-                      specifically designed to be memory-hard, with different
-                      variants (Argon2i, Argon2d, Argon2id) to balance
-                      side-channel resistance and hardware attack resistance.
-                      Argon2 is generally recommended for secure password
-                      hashing.
-    """
+class ScryptParams:
+    def __init__(self, n: int, r: int, p: int) -> None:
+        self.n = n
+        self.r = r
+        self.p = p
 
-    PBKDF2 = 1
-    SCRYPT = 2
-    ARGON2 = 3
+    @staticmethod
+    def from_dict(params: dict) -> "ScryptParams":
+        return ScryptParams(n=params["n"], r=params["r"], p=params["p"])
+
+
+class Argon2Params:
+    def __init__(self, time_cost: int, memory_cost: int, parallelism: int) -> None:
+        self.time_cost = time_cost
+        self.memory_cost = memory_cost
+        self.parallelism = parallelism
+
+    @staticmethod
+    def from_dict(params: dict) -> "Argon2Params":
+        return Argon2Params(
+            time_cost=params["time_cost"],
+            memory_cost=params["memory_cost"],
+            parallelism=params["parallelism"],
+        )
 
 
 class KDF:
-    def __init__(self, kdf_type: KDFType, length: int = 32):
-        self.kdf_type = kdf_type
-        if length != 16 and length != 32:
-            raise ValueError("Invalid key length, must be 16 (128 bits) or 32 (256 bits)")
+    def __init__(self, params: Union[Pbkdf2Params, ScryptParams, Argon2Params], length: int = 32):
+        self.params = params
+        if length != 16 and length != 32 and length != 64:
+            raise ValueError(
+                "Invalid key length, must be 16 (128 bits) or 32 (256 bits) or 64 (512 bits)"
+            )
         self.length = length
 
     def derive(self, password: bytes, salt: bytes) -> bytes:
-        if self.kdf_type == KDFType.PBKDF2:
-            return self._derive_pbkdf2(password, salt)
-        elif self.kdf_type == KDFType.SCRYPT:
-            return self._derive_scrypt(password, salt)
-        elif self.kdf_type == KDFType.ARGON2:
-            return self._derive_argon2(password, salt)
+        if isinstance(self.params, Pbkdf2Params):
+            return self._derive_pbkdf2(password, salt, self.params)
+        elif isinstance(self.params, ScryptParams):
+            return self._derive_scrypt(password, salt, self.params)
+        elif isinstance(self.params, Argon2Params):
+            return self._derive_argon2(password, salt, self.params)
         else:
-            raise ValueError("Invalid KDF type")
+            raise ValueError("Invalid KDF parameters")
 
-    def _derive_pbkdf2(self, password: bytes, salt: bytes) -> bytes:
+    def _derive_pbkdf2(self, password: bytes, salt: bytes, params: Pbkdf2Params) -> bytes:
         kdf = PBKDF2HMAC(
             algorithm=hashes.SHA256(),
             length=self.length,
             salt=salt,
-            iterations=300_000,
+            iterations=params.iterations,
             backend=default_backend(),
         )
         return kdf.derive(password)
 
-    def _derive_scrypt(self, password: bytes, salt: bytes) -> bytes:
+    def _derive_scrypt(self, password: bytes, salt: bytes, params: ScryptParams) -> bytes:
         kdf = Scrypt(
             salt=salt,
             length=self.length,  # key length 256 bits or 128 bits
-            n=2**14,  # CPU/memory cost parameter (higher is more expensive)
-            r=8,  # block size parameter
-            p=1,  # parallelization parameter
+            n=params.n,  # CPU/memory cost parameter (higher is more expensive)
+            r=params.r,  # block size parameter
+            p=params.p,  # parallelization parameter
             backend=default_backend(),
         )
         return kdf.derive(password)
 
-    def _derive_argon2(self, password: bytes, salt: bytes) -> bytes:
+    def _derive_argon2(self, password: bytes, salt: bytes, params: Argon2Params) -> bytes:
         return hash_secret_raw(
             secret=password,
             salt=salt,
-            time_cost=2,  # Number of iterations
-            memory_cost=2**16,  # Memory cost in KB (2^16 = 64MB)
-            parallelism=1,  # Number of threads
+            time_cost=params.time_cost,  # Number of iterations
+            memory_cost=params.memory_cost,  # Memory cost in KB (2 GiB)
+            parallelism=params.parallelism,  # Number of threads
             hash_len=self.length,  # Output length
             type=Type.ID,  # Argon2id
         )
 
 
 class Cipher:
-    def __init__(self, password: bytes, kdf: Optional[KDF] = None):
+    def __init__(
+        self,
+        password: bytes,
+        kdf: Optional[KDF] = None,
+    ):
         self.password = password
-        self.kdf = kdf or KDF(KDFType.PBKDF2, 32)
+        self.kdf = kdf or KDF(Pbkdf2Params(300_000), 32)
 
     def encrypt_legacy(self, data: bytes) -> bytes:
         salt = os.urandom(16)

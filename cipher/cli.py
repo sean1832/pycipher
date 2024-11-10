@@ -3,7 +3,7 @@ import base64
 from getpass import getpass
 
 from cipher import __version__
-from cipher.cipher import KDF, Cipher, KDFType
+from cipher.cipher import KDF, Argon2Params, Cipher, Pbkdf2Params, ScryptParams
 
 
 def get_parser():
@@ -55,11 +55,11 @@ def main():
     args = parser.parse_args()
 
     if args.kdf == "pbkdf2":
-        type = KDFType.PBKDF2
+        params = Pbkdf2Params(300_000)
     elif args.kdf == "scrypt":
-        type = KDFType.SCRYPT
+        params = ScryptParams(2**14, 8, 1)
     elif args.kdf == "argon2":
-        type = KDFType.ARGON2
+        params = Argon2Params(1, 2**21, 4)
 
     if args.command == "encrypt":
         if args.input_type == "file":
@@ -72,7 +72,7 @@ def main():
 
         key = getpass("Enter your password: ")
 
-        cipher = Cipher(key.encode("utf-8"), kdf=KDF(type, 32))
+        cipher = Cipher(key.encode("utf-8"), kdf=KDF(params, 32))
         encrypted_data = cipher.encrypt_aesgcm(data)
         if args.output:
             with open(args.output, "wb") as f:
@@ -88,7 +88,7 @@ def main():
             data = base64.b64decode(args.data.encode("utf-8"))
 
         key = getpass("Enter your password: ")
-        cipher = Cipher(key.encode("utf-8"), kdf=KDF(type, 32))
+        cipher = Cipher(key.encode("utf-8"), kdf=KDF(params, 32))
         try:
             decrypted_data = cipher.decrypt_aesgcm(data)
         except ValueError:
