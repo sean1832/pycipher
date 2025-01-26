@@ -1,5 +1,5 @@
 # PyCipher
-<img src="https://github.com/sean1832/py-cipher/assets/icon.png" width="160">
+<img src="https://github.com/sean1832/py-cipher/blob/main/assets/icon.png" width="160">
 
 PyCipher is a simple python application that allows you to encrypt and decrypt text using python's cryptography library.
 It comes with a CLI and a GUI interface.
