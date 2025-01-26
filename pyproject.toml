@@ -17,3 +17,6 @@ cipher-gui = "cipher.gui:main"
 
 [tool.setuptools.dynamic]
 version = { attr = "cipher.__version__" }
+
+[tool.setuptools]
+packages = ["cipher"]  # Explicitly specify the package
