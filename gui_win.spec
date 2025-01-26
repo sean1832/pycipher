@@ -34,7 +34,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name=f"cipher-{version}",  # Append the version to the name
+    name=f"cipher",  # Append the version to the name
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -47,6 +47,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
+    icon=["assets/icon.ico"],
 )
 
 coll = COLLECT(
