@@ -10,22 +10,21 @@ spec.loader.exec_module(cipher)
 version = cipher.__version__
 
 a = Analysis(
-    ['cipher\\gui.py'],
-    pathex=['./cipher'],
+    ["cipher\\gui.py"],
+    pathex=["./cipher"],
     binaries=[],
-    datas=[('./cipher', 'cipher')],
+    datas=[("./cipher", "cipher")],
     hiddenimports=[
-        'cipher.cipher',
-        'cryptography',
-        'cryptography.hazmat.primitives.kdf.pbkdf2',
-        'cryptography.hazmat.primitives.kdf.scrypt',
-        'cryptography.hazmat.backends.openssl.backend'
+        "cipher.cipher",
+        "cryptography",
+        "cryptography.hazmat.primitives.kdf.pbkdf2",
+        "cryptography.hazmat.primitives.kdf.scrypt",
+        "cryptography.hazmat.backends.openssl.backend",
     ],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=['PyQt6.QtWebEngineWidgets'],
-    noarchive=True,
+    noarchive=False,
     optimize=1,
 )
 pyz = PYZ(a.pure)
@@ -33,10 +32,9 @@ pyz = PYZ(a.pure)
 exe = EXE(
     pyz,
     a.scripts,
-    a.binaries,
-    a.datas,
     [],
-    name=f'cipher-gui-{version}',  # Append the version to the name
+    exclude_binaries=True,
+    name=f"cipher-{version}",  # Append the version to the name
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -49,4 +47,14 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
+)
+
+coll = COLLECT(
+    exe,
+    a.binaries,
+    a.datas,
+    strip=False,
+    upx=True,
+    upx_exclude=[],
+    name=f"cipher-{version}",
 )
