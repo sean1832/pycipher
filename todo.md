@@ -1,0 +1,2 @@
+- [ ] Directory mode: Encrypt/Decrypt all files in a directory, including subdirectories.
+- [ ] Self hosted server Web GUI (Streamlit with docker)
