@@ -5,10 +5,19 @@ PyCipher is a simple python application that allows you to encrypt and decrypt t
 It comes with a CLI and a GUI interface.
 
 ## Installation
+
+### Prebuilt binaries
+You can download the standalone prebuilt binaries from the [latest releases](https://github.com/sean1832/py-cipher/releases/latest) page.
+
+### Install using pip
+You can install the package using pip by running the following commands.
 ```bash
 git clone https://github.com/sean1832/py-cipher.git
 pip install .
 ```
+
+### Build from source
+see [Build Guide](https://github.com/sean1832/py-cipher/docs/Build.md) for more information.
 
 ## GUI - Usage (Recommended)
 Enter the following command in the terminal to launch the GUI interface after installation.
