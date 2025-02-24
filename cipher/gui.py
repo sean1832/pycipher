@@ -231,19 +231,27 @@ class CipherApp(QMainWindow):
             self.kdf_param_layout.addWidget(self.argon2_parallelism_input)
             self.argon2_parallelism_input.show()
 
+    def update_window_size(self):
+        # Force the main window to resize based on the current layout's size hint.
+        # This ensures that if widgets are hidden (e.g., in File mode), the window becomes compact.
+        self.adjustSize()  # Recalculate the layout
+        self.resize(self.sizeHint())  # Enforce the new size
+
     def toggle_input_fields(self):
         input_type = self.input_type.currentText()
         if input_type == "File":
             self.input_file_layout.itemAt(0).widget().setVisible(True)  # type: ignore # QLineEdit
             self.input_file_layout.itemAt(1).widget().setVisible(True)  # type: ignore # QPushButton
             self.input_text.setVisible(False)
+            self.setMinimumHeight(250)  # Smaller minimum height for file mode
         else:
             self.input_file_layout.itemAt(0).widget().setVisible(False)  # type: ignore
             self.input_file_layout.itemAt(1).widget().setVisible(False)  # type: ignore
             self.input_text.setVisible(True)
+            self.setMinimumHeight(400)  # Larger minimum height for text mode
 
         # Adjust the window size based on the new layout
-        self.adjustSize()
+        self.update_window_size()
 
     def toggle_output_fields(self):
         output_type = self.output_type.currentText()
@@ -251,13 +259,15 @@ class CipherApp(QMainWindow):
             self.output_file_layout.itemAt(0).widget().setVisible(True)  # type: ignore # QLineEdit
             self.output_file_layout.itemAt(1).widget().setVisible(True)  # type: ignore # QPushButton
             self.output_text.setVisible(False)
+            self.setMinimumHeight(200)  # Smaller minimum height for file mode
         else:
             self.output_file_layout.itemAt(0).widget().setVisible(False)  # type: ignore
             self.output_file_layout.itemAt(1).widget().setVisible(False)  # type: ignore
             self.output_text.setVisible(True)
+            self.setMinimumHeight(400)  # Larger minimum height for text mode
 
         # Adjust the window size based on the new layout
-        self.adjustSize()
+        self.update_window_size()
 
     def select_input_file(self):
         file_dialog = QFileDialog()
