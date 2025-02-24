@@ -24,8 +24,17 @@ pip install -e .
 REM Install pyinstaller in the conda environment
 pip install pyinstaller
 
-REM Run pyinstaller with your spec file
-pyinstaller gui_win.spec
+cls
+echo.
+    echo ==========================================
+    echo Compiling portable version...
+    echo ==========================================
+    pyinstaller gui_win_portable.spec
 
+echo.
+    echo ==========================================
+    echo Compiling standard version...
+    echo ==========================================
+    pyinstaller gui_win.spec
 
 pause

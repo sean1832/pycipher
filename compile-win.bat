@@ -13,6 +13,18 @@ echo Installing the required packages...
 pip install -e .
 
 pip install pyinstaller
-pyinstaller gui.spec
+
+cls
+echo.
+    echo ==========================================
+    echo Compiling portable version...
+    echo ==========================================
+    pyinstaller gui_win_portable.spec
+
+echo.
+    echo ==========================================
+    echo Compiling standard version...
+    echo ==========================================
+    pyinstaller gui_win.spec
 
 pause
