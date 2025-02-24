@@ -3,7 +3,7 @@ import os
 import sys
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QFont
+from PyQt6.QtGui import QFont, QIcon
 from PyQt6.QtWidgets import (
     QApplication,
     QComboBox,
@@ -21,7 +21,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from cipher import __version__
+from cipher import ICON_PATH, __version__
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from cipher.cipher import KDF, Argon2Params, Cipher, Pbkdf2Params, ScryptParams
@@ -31,6 +31,7 @@ class CipherApp(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle(f"Cipher {__version__}")
+        self.setWindowIcon(QIcon(ICON_PATH))
         text_font = QFont("Consolas", 10)  # better for monospace font
 
         # Central widget and main layout
@@ -446,6 +447,7 @@ class CipherApp(QMainWindow):
 
 def main():
     app = QApplication(sys.argv)
+    # app.setWindowIcon(QIcon("cipher/assets/icon.png"))
     window = CipherApp()
     window.show()
     sys.exit(app.exec())
