@@ -8,8 +8,11 @@ dynamic = ["version"]
 description = "A simple encryption/decryption tool"
 authors = [{ name = "sean1832" }]
 license = { text = "MIT" }
-dependencies = ["cryptography", "pyqt6", "argon2-cffi"]
+dependencies = ["cryptography", "argon2-cffi"]      # Core dependencies
 
+[project.optional-dependencies]
+gui = ["pyqt6==6.8.1"]
+# webui = ["streamlit==1.42.2"]
 
 [project.scripts]
 cipher = "cipher.cli:main"

@@ -15,8 +15,13 @@ You can download the standalone prebuilt binaries from the [latest releases](htt
 You can install the package using pip by running the following commands.
 ```bash
 git clone https://github.com/sean1832/py-cipher.git
-pip install .
+pip install .[gui]
 ```
+
+> if you just want to use the CLI, you can install without the `[gui]` extra.
+> ```bash
+> pip install .
+> ```
 
 ### Build from source
 see [Build Guide](https://github.com/sean1832/py-cipher/blob/main/docs/Build.md) for more information.
